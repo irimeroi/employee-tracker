@@ -29,7 +29,3 @@ CREATE TABLE employee (
     FOREIGN KEY (role_id) REFERENCES role(id) ON DELETE SET NULL
 );
 
--- employee table needs a self join because the manager is a reference to the employee table
--- when showing departments = no join
--- to show roles = join to make sure no one sees the dept id
-
