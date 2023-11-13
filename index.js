@@ -40,6 +40,14 @@ function startApp() {
                     case 'Add a role':
                         addRole()
                         break;
+                    case 'Add an employee':
+                        addEmployee()
+                        break;
+                    case 'Update an employee role':
+                        updateEmployee()
+                        break;
+                    case 'Quit':
+                        db.end();
                 }
             })
 };
@@ -106,7 +114,52 @@ async function addRole() {
     startApp();
 }
 
+async function addEmployee() {
+    const roleName = await db.query("select id as value, title as name from role");
+    const managerName = await db.query("select id as value, concat(first_name,' ',last_name) as name from employee");
+    const answer = await inquirer.prompt([
+        {
+            type: 'input',
+            message: 'Please enter the employee\'s first name.',
+            name: 'firstName',
+        }, {
+            type: 'input',
+            message: 'Please enter the employee\'s last name.',
+            name: 'lastName',
+        }, {
+            type: 'list',
+            message: 'Please enter the employee\'s role.',
+            name: 'emplRole',
+            choices: roleName,
+        }, {
+            type: 'list',
+            message: 'Please enter the employee\'s manager.',
+            name: 'emplManager',
+            choices: managerName,
+        },
+    ])
+    await db.query("INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?,?,?,?)", [answer.firstName, answer.lastName, answer.emplRole, answer.emplManager]);
+    startApp();
+};
+
+async function updateEmployee() {
+    const allEmployees = await db.query("select id as value, concat (first_name, ' ', last_name) as name from employee");
+    const allRoles = await db.query("select id as value, title as name from role");
+    const answer = await inquirer.prompt([
+        {
+            type: 'list',
+            message: 'Please choose which employee you would like to update',
+            name: 'updtEmployee',
+            choices: allEmployees,
+        }, {
+            type: 'list',
+            message: 'Please choose the employee\'s new role:',
+            name: 'newRole',
+            choices: allRoles,
+        }
+    ]);
+    await db.query("update employee set role_id = ? where id = ?", [answer.newRole, answer.updtEmployee]);
+    startApp();
+};
+
 startApp();
-
-
-// SELECT employee.first_name, manager.first_name FROM employee LEFT JOIN employee AS manager ON employee.manager_id = manager.id;
