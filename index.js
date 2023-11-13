@@ -2,7 +2,7 @@ const inquirer = require('inquirer');
 const db = require('./db/connection');
 require("console.table");
 
-// allows asyn await
+// allows async await
 const utils = require('util');
 db.query = utils.promisify(db.query);
 
@@ -18,10 +18,17 @@ function startApp() {
                     ['View all departments',
                         'View all roles',
                         'View all employees',
+                        'View employees by manager',
+                        'View employees by department',
+                        'View budget by department',
                         'Add a department',
                         'Add a role',
                         'Add an employee',
                         'Update an employee role',
+                        'Update an employee manager',
+                        'Delete a department',
+                        'Delete a role',
+                        'Delete an employee',
                         'Quit'],
             }]).then((answer) => {
                 switch (answer.userChoice) {
@@ -34,6 +41,15 @@ function startApp() {
                     case 'View all employees':
                         viewAllEmployees()
                         break;
+                    case 'View employees by manager':
+                        employeesByManager()
+                        break;
+                    case 'View employees by department':
+                        employeesByDepartment()
+                        break;
+                    case 'View budget by department':
+                        sumSalaries()
+                        break;
                     case 'Add a department':
                         addDepartment()
                         break;
@@ -45,6 +61,18 @@ function startApp() {
                         break;
                     case 'Update an employee role':
                         updateEmployee()
+                        break;
+                    case 'Update an employee manager':
+                        updateManagers()
+                        break;
+                    case 'Delete a department':
+                        deleteDeparment()
+                        break;
+                    case 'Delete a role':
+                        deleteRole()
+                        break;
+                    case 'Delete an employee':
+                        deleteEmployee()
                         break;
                     case 'Quit':
                         db.end();
@@ -76,7 +104,26 @@ async function viewAllEmployees() {
     ON manager.id = employee.manager_id`);
     console.table(viewEmpl)
     startApp();
-}
+};
+
+async function employeesByManager () {
+    const byManager = await db.query(`SELECT concat(employee.first_name, " ", employee.last_name) AS employee, concat(manager.first_name, " ", manager.last_name) AS manager FROM employee LEFT JOIN employee manager ON manager.id = employee.manager_id WHERE employee.manager_id IS NOT NULL`);
+    console.table(byManager)
+    startApp();
+ };
+
+//   no funciona yet
+ async function employeesByDepartment() {
+    const byDepartment = await db.query(`SELECT employee.id, concat(employee.first_name, " ", employee.last_name) AS employee, department.name AS department, role.title AS role FROM employee LEFT JOIN role ON employee.role_id = role.id LEFT JOIN department ON role.department_id = department.id`);
+    console.table(byDepartment)
+    startApp();
+ };
+
+async function sumSalaries() {
+    const allDeptSum = await db.query('SELECT role.department_id AS id, department.name AS name, SUM(role.salary) AS budget FROM department LEFT JOIN role ON department.id = role.department_id GROUP BY department.id');
+    console.table(allDeptSum);
+    startApp();
+};
 
 async function addDepartment() {
     const answer = await inquirer.prompt([
@@ -136,7 +183,7 @@ async function addEmployee() {
             message: 'Please enter the employee\'s manager.',
             name: 'emplManager',
             choices: managerName,
-        },
+        }
     ])
     await db.query("INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?,?,?,?)", [answer.firstName, answer.lastName, answer.emplRole, answer.emplManager]);
     startApp();
@@ -162,4 +209,68 @@ async function updateEmployee() {
     startApp();
 };
 
+async function updateManagers() {
+    const employees = await db.query("select id as value, concat(first_name,' ',last_name) as name from employee");
+    const allManagers = await db.query("select id as value, concat(first_name,' ',last_name) as name from employee");
+    const answer = await inquirer.prompt([
+        {
+            type: 'list',
+            message: 'Please select an employee',
+            name: 'employeesNames',
+            choices: employees,
+        }, {
+            type: 'list',
+            message: 'Please select a new manager',
+            name: 'managersNames',
+            choices: allManagers,
+        }
+    ]);
+    await db.query("update employee set employee.manager_id = ? where employee.id = ?", [answer.managersNames, answer.employeesNames]);
+    startApp();
+};
+
+async function deleteDeparment() {
+    const allDepartments = await db.query('select id as value, department.name from department');
+    const answer = await inquirer.prompt([
+        {
+            type: 'list',
+            message: 'Please select which department you would like to delete',
+            name: 'deleteDept',
+            choices: allDepartments,
+        }
+    ]);
+    await db.query("delete from department where id = ?", [answer.deleteDept]);
+    startApp();
+};
+
+async function deleteRole() {
+    const allRoles = await db.query('select id as value, title as name from role');
+    const answer = await inquirer.prompt([
+        {
+            type: 'list',
+            message: 'Please select which role you would like to delete',
+            name: 'deleteRole',
+            choices: allRoles,
+        }
+    ]);
+    await db.query("delete from role where id = ?", [answer.deleteRole]);
+    startApp();
+};
+
+async function deleteEmployee() {
+    const allEmpl = await db.query(`select id as value, concat (first_name, ' ', last_name) as name from employee`);
+    const answer = await inquirer.prompt([
+        {
+            type: 'list',
+            message: 'Please select which employee you would like to delete',
+            name: 'deleteEmpl',
+            choices: allEmpl,
+        }
+    ]);
+    await db.query("delete from employee where id = ?", [answer.deleteEmpl]);
+    startApp();
+};
+
 startApp();
+
+//add console.logs for succesfully added things
