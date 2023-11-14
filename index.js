@@ -87,7 +87,7 @@ async function viewAllDepartments() {
 }
 
 async function viewAllRoles() {
-    const viewRoles = await db.query("SELECT role.id, role.title, role.salary, department.name AS department_name FROM role LEFT JOIN department ON role.department_id = department.id");
+    const viewRoles = await db.query("SELECT role.id, role.title, role.salary, department.name AS department FROM role LEFT JOIN department ON role.department_id = department.id");
     console.table(viewRoles);
     startApp();
 };
@@ -112,7 +112,7 @@ async function employeesByManager () {
     startApp();
  };
 
-//   no funciona yet
+
  async function employeesByDepartment() {
     const byDepartment = await db.query(`SELECT employee.id, concat(employee.first_name, " ", employee.last_name) AS employee, department.name AS department, role.title AS role FROM employee LEFT JOIN role ON employee.role_id = role.id LEFT JOIN department ON role.department_id = department.id`);
     console.table(byDepartment)
@@ -133,12 +133,13 @@ async function addDepartment() {
             name: 'deptName',
         }
     ])
-    const addDept = await db.query("INSERT INTO department (name) VALUES (?)", [answer.deptName])
+    await db.query("INSERT INTO department (name) VALUES (?)", [answer.deptName])
+    console.log('Department succesfully added!');
     startApp();
 };
 
 async function addRole() {
-    const departments = await db.query("select id as value, name as name from department");
+    const departments = await db.query("SELECT id AS value, name AS name FROM department");
     const { roleName, roleSalary, roleDept } = await inquirer
     .prompt([
         {
@@ -157,41 +158,44 @@ async function addRole() {
         }, 
     ]);
     await db.query("INSERT INTO role (title, salary, department_id) values (?,?,?)", [roleName, roleSalary, roleDept]);
-    console.log('Heyyy it is working');
+    console.log('Role succesfully added!');
     startApp();
 }
 
 async function addEmployee() {
-    const roleName = await db.query("select id as value, title as name from role");
-    const managerName = await db.query("select id as value, concat(first_name,' ',last_name) as name from employee");
+    const roleName = await db.query("SELECT id AS value, title AS name FROM role");
+    const managerName = await db.query("SELECT id AS value, concat(first_name,' ',last_name) AS name FROM employee");
+    managerName.push({ value: null, name: 'No manager'});
     const answer = await inquirer.prompt([
         {
             type: 'input',
-            message: 'Please enter the employee\'s first name.',
+            message: 'Please enter the employee\'s first name',
             name: 'firstName',
         }, {
             type: 'input',
-            message: 'Please enter the employee\'s last name.',
+            message: 'Please enter the employee\'s last name',
             name: 'lastName',
         }, {
             type: 'list',
-            message: 'Please enter the employee\'s role.',
+            message: 'Please enter the employee\'s role',
             name: 'emplRole',
             choices: roleName,
         }, {
             type: 'list',
-            message: 'Please enter the employee\'s manager.',
+            message: 'Please enter the employee\'s manager',
             name: 'emplManager',
             choices: managerName,
         }
     ])
-    await db.query("INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?,?,?,?)", [answer.firstName, answer.lastName, answer.emplRole, answer.emplManager]);
+    const managerId = answer.emplManager === 'No manager' ? null : answer.emplManager;
+    await db.query("INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?,?,?,?)", [answer.firstName, answer.lastName, answer.emplRole, managerId]);
+    console.log('Employee succesfully added!');
     startApp();
 };
 
 async function updateEmployee() {
-    const allEmployees = await db.query("select id as value, concat (first_name, ' ', last_name) as name from employee");
-    const allRoles = await db.query("select id as value, title as name from role");
+    const allEmployees = await db.query("SELECT id AS value, concat (first_name, ' ', last_name) AS name FROM employee");
+    const allRoles = await db.query("SELECT id AS value, title AS name FROM role");
     const answer = await inquirer.prompt([
         {
             type: 'list',
@@ -205,13 +209,14 @@ async function updateEmployee() {
             choices: allRoles,
         }
     ]);
-    await db.query("update employee set role_id = ? where id = ?", [answer.newRole, answer.updtEmployee]);
+    await db.query("UPDATE employee SET role_id = ? WHERE id = ?", [answer.newRole, answer.updtEmployee]);
+    console.log('Employee succesfully updated!');
     startApp();
 };
 
 async function updateManagers() {
-    const employees = await db.query("select id as value, concat(first_name,' ',last_name) as name from employee");
-    const allManagers = await db.query("select id as value, concat(first_name,' ',last_name) as name from employee");
+    const employees = await db.query("SELECT id AS value, concat(first_name,' ',last_name) AS name FROM employee");
+    const allManagers = await db.query("SELECT id AS value, concat(first_name,' ',last_name) AS name FROM employee");
     const answer = await inquirer.prompt([
         {
             type: 'list',
@@ -225,12 +230,13 @@ async function updateManagers() {
             choices: allManagers,
         }
     ]);
-    await db.query("update employee set employee.manager_id = ? where employee.id = ?", [answer.managersNames, answer.employeesNames]);
+    await db.query("UPDATE employee SET employee.manager_id = ? WHERE employee.id = ?", [answer.managersNames, answer.employeesNames]);
+    console.log('Manager succesfully updated!');
     startApp();
 };
 
 async function deleteDeparment() {
-    const allDepartments = await db.query('select id as value, department.name from department');
+    const allDepartments = await db.query('SELECT id AS value, department.name FROM department');
     const answer = await inquirer.prompt([
         {
             type: 'list',
@@ -239,12 +245,13 @@ async function deleteDeparment() {
             choices: allDepartments,
         }
     ]);
-    await db.query("delete from department where id = ?", [answer.deleteDept]);
+    await db.query("DELETE FROM department WHERE id = ?", [answer.deleteDept]);
+    console.log('Department succesfully deleted!');
     startApp();
 };
 
 async function deleteRole() {
-    const allRoles = await db.query('select id as value, title as name from role');
+    const allRoles = await db.query('SELECT id AS value, title AS name FROM role');
     const answer = await inquirer.prompt([
         {
             type: 'list',
@@ -253,12 +260,13 @@ async function deleteRole() {
             choices: allRoles,
         }
     ]);
-    await db.query("delete from role where id = ?", [answer.deleteRole]);
+    await db.query("DELETE FROM role WHERE id = ?", [answer.deleteRole]);
+    console.log('Role succesfully deleted!');
     startApp();
 };
 
 async function deleteEmployee() {
-    const allEmpl = await db.query(`select id as value, concat (first_name, ' ', last_name) as name from employee`);
+    const allEmpl = await db.query(`SELECT id AS value, concat (first_name, ' ', last_name) AS name FROM employee`);
     const answer = await inquirer.prompt([
         {
             type: 'list',
@@ -267,10 +275,9 @@ async function deleteEmployee() {
             choices: allEmpl,
         }
     ]);
-    await db.query("delete from employee where id = ?", [answer.deleteEmpl]);
+    await db.query("DELETE FROM employee WHERE id = ?", [answer.deleteEmpl]);
+    console.log('Employee succesfully deleted!');
     startApp();
 };
 
 startApp();
-
-//add console.logs for succesfully added things
